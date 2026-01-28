@@ -1,0 +1,27 @@
+__pycache__/
+*.pyc
+.env
+temp/
+*.db
+*.sqlite
+.DS_Store
+.streamlit/secrets.toml
+test_*.py
+fix_*.py
+migrate_*.py
+*_updated_sections.txt
+init_postgres.py
+
+# Model files - DO NOT COMMIT
+pretrained_models/
+wav2vec2_checkpoints/
+assets/
+*.pth
+*.bin
+*.h5
+*.ckpt
+*.pt
+*.safetensors
+models--*/
+blobs/
+snapshots/

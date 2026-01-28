@@ -1,0 +1,83 @@
+# Core
+streamlit==1.31.0
+python-dotenv==1.0.0
+
+# Deep Learning
+torch==2.0.1
+torchvision==0.15.2
+torchaudio==2.0.2
+transformers==4.37.2
+tensorflow==2.20.0
+keras==3.12.0
+
+# Computer Vision (headless for servers)
+opencv-python-headless==4.9.0.80
+opencv-contrib-python-headless==4.8.1.78
+hsemotion==0.3.0
+facenet-pytorch==2.6.0
+mtcnn==1.0.0
+retina-face==0.0.17
+timm==0.9.16
+
+# Audio Processing
+librosa==0.10.1
+soundfile==0.12.1
+audioread==3.1.0
+soxr==1.0.0
+speechbrain==1.0.0
+openai-whisper==20231117
+
+# NLP
+sentencepiece==0.2.1
+sacremoses==0.1.1
+tokenizers==0.15.2
+
+# Database
+psycopg2-binary==2.9.11
+
+# Data Processing
+numpy==1.26.4
+pandas==2.2.0
+scipy==1.15.3
+scikit-learn==1.4.0
+pillow==10.2.0
+
+# Visualization
+plotly==5.18.0
+matplotlib==3.8.2
+seaborn==0.13.1
+
+# PDF Generation
+reportlab==4.4.9
+
+# Video Processing
+moviepy==1.0.3
+imageio==2.37.2
+imageio-ffmpeg==0.6.0
+ffmpeg-python==0.2.0
+pydub==0.25.1
+
+# Utilities
+requests==2.32.5
+tqdm==4.66.1
+pyyaml==6.0.3
+click==8.3.1
+fire==0.7.1
+joblib==1.5.3
+decorator==4.4.2
+filelock==3.20.3
+fsspec==2026.1.0
+huggingface-hub==0.36.0
+safetensors==0.7.0
+
+# Streamlit dependencies
+altair==5.5.0
+blinker==1.9.0
+cachetools==5.5.2
+gitpython==3.1.46
+pyarrow==23.0.0
+pydeck==0.9.1
+tenacity==8.5.0
+validators==0.35.0
+protobuf==6.33.4
+typing-extensions==4.15.0
