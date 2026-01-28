@@ -120,7 +120,6 @@ SUBSCRIPTION_TIERS = {
 # PostgreSQL Database - Streamlit Cloud Compatible
 DATABASE_URL = ''
 
-# Try Streamlit secrets first (for Streamlit Cloud)
 try:
     import streamlit as st
     if hasattr(st, 'secrets') and 'DATABASE_URL' in st.secrets:
@@ -134,18 +133,25 @@ if not DATABASE_URL:
     load_dotenv()
     DATABASE_URL = os.getenv('DATABASE_URL', '')
 
-# Parse connection string
+# Parse connection string for individual parameters (with SSL support)
 POSTGRES_CONFIG = {
-    'host': 'localhost', 'port': 5432, 'database': 'emosense_db',
-    'user': 'postgres', 'password': ''
+    'host': 'localhost', 
+    'port': 5432, 
+    'database': 'emosense_db',
+    'user': 'postgres', 
+    'password': '',
+    'sslmode': 'require'  # ADD THIS LINE
 }
 
 if DATABASE_URL:
-    pattern = r'postgresql://([^:]+):([^@]+)@([^:]+):(\d+)/([^?]+)'
+    pattern = r'postgresql://([^:]+):([^@]+)@([^:/]+):?(\d+)?/([^?]+)'
     match = re.match(pattern, DATABASE_URL)
     if match:
         POSTGRES_CONFIG = {
-            'user': match.group(1), 'password': match.group(2),
-            'host': match.group(3), 'port': int(match.group(4)),
-            'database': match.group(5)
+            'user': match.group(1), 
+            'password': match.group(2),
+            'host': match.group(3), 
+            'port': int(match.group(4)) if match.group(4) else 5432,
+            'database': match.group(5),
+            'sslmode': 'require'  # ADD THIS LINE
         }
