@@ -56,6 +56,11 @@ def show_history_page():
                     st.write(f"**Stress Level:** {item['metrics'].get('stress', 0):.0f}/100")
             
             with col4:
+                # ADD PLAYBACK BUTTON
+                if item.get('file_path'):
+                    if st.button("▶️ Play", key=f"play_{item['id']}"):
+                        st.session_state[f'show_playback_{item["id"]}'] = not st.session_state.get(f'show_playback_{item["id"]}', False)
+                
                 if st.button("View", key=f"view_{item['id']}"):
                     st.session_state.view_analysis_id = item['id']
                 
@@ -63,6 +68,21 @@ def show_history_page():
                     if delete_analysis(item['id'], user_id):
                         st.success("Deleted!")
                         st.rerun()
+            
+            # ADD PLAYBACK DISPLAY (SMALL SIZE)
+            if st.session_state.get(f'show_playback_{item["id"]}', False):
+                st.markdown("---")
+                if item.get('file_path'):
+                    file_path = item['file_path']
+                    # Display in smaller container (webcam size)
+                    col_left, col_center, col_right = st.columns([1, 2, 1])
+                    with col_center:
+                        if item['type'] == 'video' or file_path.endswith(('.mp4', '.avi', '.mov', '.webm')):
+                            st.video(file_path)
+                        elif item['type'] == 'audio' or file_path.endswith(('.mp3', '.wav', '.m4a')):
+                            st.audio(file_path)
+                else:
+                    st.warning("Original file not available for playback")
     
     # View detailed analysis if selected
     if 'view_analysis_id' in st.session_state and st.session_state.view_analysis_id:
