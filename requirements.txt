@@ -1,36 +1,24 @@
-cat > requirements.txt << 'EOF'
-# Core
 streamlit==1.31.0
 
-# Deep Learning
 torch==2.5.1
 transformers==4.37.2
 
-# Computer Vision
 opencv-python-headless==4.9.0.80
 hsemotion==0.3.0
 pillow==10.2.0
 
-# Audio Processing
 librosa==0.10.1
 soundfile==0.12.1
 openai-whisper==20231117
 
-# Database
 psycopg2-binary==2.9.11
 
-# Data Processing
 numpy==1.26.4
 pandas==2.2.0
 
-# Visualization
 plotly==5.18.0
 
-# PDF Generation
 reportlab==4.0.7
 
-# Utilities
 requests==2.32.5
 python-dotenv==1.0.0
-EOF
-
