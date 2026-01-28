@@ -9,14 +9,21 @@ import config
 
 def get_connection():
     """Get PostgreSQL connection"""
+    # Use DATABASE_URL directly if available (Streamlit Cloud)
+    if config.DATABASE_URL:
+        return psycopg2.connect(
+            config.DATABASE_URL,
+            sslmode='require'
+        )
+    # Fall back to individual parameters (local development)
     return psycopg2.connect(
         host=config.POSTGRES_CONFIG['host'],
         port=config.POSTGRES_CONFIG['port'],
         database=config.POSTGRES_CONFIG['database'],
         user=config.POSTGRES_CONFIG['user'],
-        password=config.POSTGRES_CONFIG['password']
+        password=config.POSTGRES_CONFIG['password'],
+        sslmode=config.POSTGRES_CONFIG.get('sslmode', 'prefer')
     )
-
 def init_database():
     """Initialize the PostgreSQL database with tables"""
     conn = get_connection()
