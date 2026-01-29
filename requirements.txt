@@ -19,4 +19,4 @@ soundfile==0.12.1
 speechbrain==0.5.16
 python-dotenv==1.0.0
 streamlit-webrtc==0.47.1
-av==10.0.0
+av==11.0.0
