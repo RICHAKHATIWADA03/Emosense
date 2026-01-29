@@ -15,12 +15,15 @@ import time
 import tempfile
 
 # WebRTC configuration for Streamlit Cloud
-RTC_CONFIGURATION = RTCConfiguration({
-    "iceServers": [
-        {"urls": ["stun:stun.l.google.com:19302"]},
-        {"urls": ["stun:stun1.l.google.com:19302"]},
-    ]
-})
+# RTC_CONFIGURATION = RTCConfiguration({
+#     "iceServers": [
+#         {"urls": ["stun:stun.l.google.com:19302"]},
+#         {"urls": ["stun:stun1.l.google.com:19302"]},
+#     ]
+# })
+RTC_CONFIGURATION = RTCConfiguration(
+    {"iceServers": [{"urls": ["stun:stun.l.google.com:19302"]}]}
+)
 
 
 class VideoRecorder:
@@ -186,16 +189,26 @@ def record_webcam_live(output_path, duration=15):
             st.session_state.recorder.add_audio_frame(frame)
         return frame
     
-    # WebRTC streamer
-    ctx = webrtc_streamer(
-        key="live-recorder",
+    # # WebRTC streamer
+    # ctx = webrtc_streamer(
+    #     key="live-recorder",
+    #     mode=WebRtcMode.SENDRECV,
+    #     rtc_configuration=RTC_CONFIGURATION,
+    #     video_frame_callback=video_frame_callback,
+    #     audio_frame_callback=audio_frame_callback,
+    #     media_stream_constraints={
+    #         "video": {"width": {"ideal": 1280}, "height": {"ideal": 720}},
+    #         "audio": True
+    #     },
+    #     async_processing=True,
+    # )
+    webrtc_ctx = webrtc_streamer(
+        key="emotion-detector",
         mode=WebRtcMode.SENDRECV,
         rtc_configuration=RTC_CONFIGURATION,
-        video_frame_callback=video_frame_callback,
-        audio_frame_callback=audio_frame_callback,
         media_stream_constraints={
-            "video": {"width": {"ideal": 1280}, "height": {"ideal": 720}},
-            "audio": True
+            "video": True,
+            "audio": False
         },
         async_processing=True,
     )
