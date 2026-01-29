@@ -1,162 +1,251 @@
-"""Webcam recorder - exact frame count for perfect sync"""
-import cv2
-import time
+"""Webcam recorder for Streamlit Cloud - Browser-based recording"""
 import streamlit as st
+import streamlit.components.v1 as components
 from pathlib import Path
-import subprocess
-import threading
+import base64
+import tempfile
 
-def record_audio_only(audio_file, duration):
-    """Record audio using ffmpeg"""
-    cmd = [
-        'ffmpeg',
-        '-f', 'avfoundation',
-        '-i', ':0',  # Audio device 0
-        '-t', str(duration),
-        '-y',
-        str(audio_file)
-    ]
-    subprocess.run(cmd, capture_output=True)
-
-def record_webcam_with_audio(output_path, duration=10, camera_index=0):
-    """Record exact number of frames for perfect sync"""
+def record_webcam_cloud(output_path, duration=15):
+    """
+    Record video using browser's MediaRecorder API
+    Works on Streamlit Cloud (records in user's browser)
+    """
     
-    temp_video = str(output_path).replace('.mp4', '_video_only.mp4')
-    temp_audio = str(output_path).replace('.mp4', '_audio.wav')
+    st.markdown("### 📹 Browser-Based Recording")
+    st.info(f"🎥 Recording will be {duration} seconds. Click 'Start Recording' below.")
     
-    cap = cv2.VideoCapture(camera_index)
-    if not cap.isOpened():
-        return None, f"Cannot access camera {camera_index}"
-    
-    fps = 30
-    width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
-    height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-    
-    # Calculate EXACT number of frames needed
-    total_frames = int(duration * fps)
-    
-    # Video writer
-    fourcc = cv2.VideoWriter_fourcc(*'mp4v')
-    out = cv2.VideoWriter(temp_video, fourcc, fps, (width, height))
-    
-    # UI
-    frame_placeholder = st.empty()
-    progress_bar = st.progress(0)
-    status_text = st.empty()
-    
-    st.info(f"🔴 Recording {total_frames} frames at {fps} fps = {duration}s")
-    
-    # Start audio recording
-    audio_thread = threading.Thread(target=record_audio_only, args=(temp_audio, duration))
-    audio_thread.start()
-    
-    # Small delay
-    time.sleep(0.1)
-    
-    # Record EXACT number of frames
-    start_time = time.time()
-    
-    for frame_num in range(total_frames):
-        ret, frame = cap.read()
-        if not ret:
-            st.warning(f"Camera read failed at frame {frame_num}")
-            # Fill with last good frame if available
-            continue
+    # HTML/JavaScript for browser-based recording
+    recorder_html = f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <style>
+            body {{
+                font-family: Arial, sans-serif;
+                max-width: 800px;
+                margin: 0 auto;
+                padding: 20px;
+            }}
+            #videoPreview {{
+                width: 100%;
+                max-width: 640px;
+                background: black;
+                border-radius: 10px;
+            }}
+            .button-container {{
+                margin: 20px 0;
+                display: flex;
+                gap: 10px;
+            }}
+            button {{
+                padding: 12px 24px;
+                font-size: 16px;
+                border: none;
+                border-radius: 5px;
+                cursor: pointer;
+                font-weight: bold;
+            }}
+            #startBtn {{
+                background-color: #FF4B4B;
+                color: white;
+            }}
+            #startBtn:hover {{
+                background-color: #E04343;
+            }}
+            #startBtn:disabled {{
+                background-color: #CCCCCC;
+                cursor: not-allowed;
+            }}
+            .status {{
+                padding: 15px;
+                border-radius: 5px;
+                margin: 10px 0;
+                font-weight: bold;
+            }}
+            .recording {{
+                background-color: #FFE5E5;
+                color: #FF4B4B;
+            }}
+            .ready {{
+                background-color: #E5F5E5;
+                color: #00AA00;
+            }}
+            .countdown {{
+                font-size: 48px;
+                font-weight: bold;
+                color: #FF4B4B;
+                text-align: center;
+                margin: 20px 0;
+            }}
+        </style>
+    </head>
+    <body>
+        <video id="videoPreview" autoplay muted></video>
         
-        out.write(frame)
+        <div class="button-container">
+            <button id="startBtn">🔴 Start Recording ({duration}s)</button>
+        </div>
         
-        # Live preview (update every 5 frames to reduce overhead)
-        if frame_num % 5 == 0:
-            frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-            cv2.circle(frame_rgb, (30, 30), 10, (255, 0, 0), -1)
-            cv2.putText(frame_rgb, "REC", (50, 40), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 0, 0), 2)
-            frame_placeholder.image(frame_rgb, channels="RGB", width=640)
+        <div id="status"></div>
+        <div id="countdown"></div>
         
-        # Progress
-        progress = (frame_num + 1) / total_frames
-        elapsed = time.time() - start_time
-        remaining = duration - int(elapsed)
-        
-        progress_bar.progress(progress)
-        status_text.markdown(f"### ⏱️ {remaining}s | Frame {frame_num+1}/{total_frames}")
-        
-        # Pace the recording to match real time
-        target_time = start_time + ((frame_num + 1) / fps)
-        current_time = time.time()
-        sleep_time = target_time - current_time
-        if sleep_time > 0:
-            time.sleep(sleep_time)
-    
-    cap.release()
-    out.release()
-    
-    # Wait for audio
-    audio_thread.join(timeout=duration + 5)
-    
-    frame_placeholder.empty()
-    progress_bar.empty()
-    status_text.empty()
-    
-    actual_duration = time.time() - start_time
-    st.info(f" Recorded {total_frames} frames in {actual_duration:.2f}s (target: {duration}s)")
-    
-    # Check files
-    if not Path(temp_video).exists():
-        return None, "Video file not created"
-    if not Path(temp_audio).exists():
-        return None, "Audio file not created"
-    
-    # Get actual durations with ffprobe
-    try:
-        video_probe = subprocess.run(
-            ['ffprobe', '-v', 'error', '-show_entries', 'format=duration', 
-             '-of', 'default=noprint_wrappers=1:nokey=1', temp_video],
-            capture_output=True, text=True
-        )
-        audio_probe = subprocess.run(
-            ['ffprobe', '-v', 'error', '-show_entries', 'format=duration',
-             '-of', 'default=noprint_wrappers=1:nokey=1', temp_audio],
-            capture_output=True, text=True
-        )
-        
-        video_dur = float(video_probe.stdout.strip())
-        audio_dur = float(audio_probe.stdout.strip())
-        st.info(f" Video: {video_dur:.2f}s | Audio: {audio_dur:.2f}s")
-    except:
-        pass
-    
-    # Merge - use video as master timeline
-    st.info(" Merging with video as master timeline...")
-    merge_cmd = [
-        'ffmpeg',
-        '-i', temp_video,
-        '-i', temp_audio,
-        '-c:v', 'libx264',
-        '-preset', 'ultrafast',
-        '-c:a', 'aac',
-        '-b:a', '192k',
-        '-map', '0:v:0',  # Use video from first input
-        '-map', '1:a:0',  # Use audio from second input
-        '-shortest',      # End when shortest stream ends
-        '-y',
-        str(output_path)
-    ]
-    
-    try:
-        result = subprocess.run(merge_cmd, capture_output=True, timeout=60)
-        
-        # Cleanup
-        Path(temp_video).unlink(missing_ok=True)
-        Path(temp_audio).unlink(missing_ok=True)
-        
-        if result.returncode == 0 and Path(output_path).exists():
-            st.success("Video is ready for analysis")
-            return str(output_path), None
-        else:
-            error = result.stderr.decode() if result.stderr else "Unknown"
-            return None, f"Merge failed: {error}"
+        <script>
+            const videoPreview = document.getElementById('videoPreview');
+            const startBtn = document.getElementById('startBtn');
+            const statusDiv = document.getElementById('status');
+            const countdownDiv = document.getElementById('countdown');
             
-    except Exception as e:
-        Path(temp_video).unlink(missing_ok=True)
-        Path(temp_audio).unlink(missing_ok=True)
-        return None, f"Error: {str(e)}"
+            let mediaRecorder;
+            let recordedChunks = [];
+            let stream;
+            const recordingDuration = {duration} * 1000; // Convert to milliseconds
+            
+            // Initialize camera
+            async function initCamera() {{
+                try {{
+                    stream = await navigator.mediaDevices.getUserMedia({{
+                        video: {{ width: 1280, height: 720 }},
+                        audio: true
+                    }});
+                    videoPreview.srcObject = stream;
+                    statusDiv.innerHTML = '<div class="status ready"> Camera ready. Click "Start Recording" to begin.</div>';
+                }} catch (err) {{
+                    statusDiv.innerHTML = '<div class="status" style="background-color: #FFE5E5; color: #FF4B4B;"> Camera access denied. Please allow camera and microphone permissions.</div>';
+                    console.error('Camera error:', err);
+                }}
+            }}
+            
+            // Start recording
+            async function startRecording() {{
+                if (!stream) {{
+                    alert('Camera not initialized');
+                    return;
+                }}
+                
+                recordedChunks = [];
+                
+                // Create MediaRecorder
+                const options = {{ mimeType: 'video/webm;codecs=vp9' }};
+                try {{
+                    mediaRecorder = new MediaRecorder(stream, options);
+                }} catch (e) {{
+                    // Fallback to default codec
+                    mediaRecorder = new MediaRecorder(stream);
+                }}
+                
+                mediaRecorder.ondataavailable = (event) => {{
+                    if (event.data.size > 0) {{
+                        recordedChunks.push(event.data);
+                    }}
+                }};
+                
+                mediaRecorder.onstop = () => {{
+                    const blob = new Blob(recordedChunks, {{ type: 'video/webm' }});
+                    uploadVideo(blob);
+                }};
+                
+                // Start recording
+                mediaRecorder.start();
+                startBtn.disabled = true;
+                
+                // Show countdown
+                let remaining = {duration};
+                statusDiv.innerHTML = '<div class="status recording">🔴 Recording in progress...</div>';
+                
+                const countdownInterval = setInterval(() => {{
+                    countdownDiv.textContent = remaining;
+                    remaining--;
+                    
+                    if (remaining < 0) {{
+                        clearInterval(countdownInterval);
+                        countdownDiv.textContent = '';
+                    }}
+                }}, 1000);
+                
+                // Auto-stop after duration
+                setTimeout(() => {{
+                    clearInterval(countdownInterval);
+                    if (mediaRecorder.state === 'recording') {{
+                        mediaRecorder.stop();
+                        statusDiv.innerHTML = '<div class="status">⏳ Processing video...</div>';
+                    }}
+                }}, recordingDuration);
+            }}
+            
+            // Upload video to Streamlit
+            function uploadVideo(blob) {{
+                const reader = new FileReader();
+                reader.onloadend = () => {{
+                    const base64data = reader.result.split(',')[1];
+                    
+                    // Send to Streamlit via postMessage
+                    window.parent.postMessage({{
+                        type: 'streamlit:setComponentValue',
+                        value: base64data
+                    }}, '*');
+                    
+                    statusDiv.innerHTML = '<div class="status ready"> Recording complete! Video uploaded.</div>';
+                    startBtn.disabled = false;
+                    startBtn.textContent = '🔴 Record Again';
+                }};
+                reader.readAsDataURL(blob);
+            }}
+            
+            // Event listeners
+            startBtn.addEventListener('click', startRecording);
+            
+            // Initialize on load
+            initCamera();
+        </script>
+    </body>
+    </html>
+    """
+    
+    # Render the recorder component
+    video_data = components.html(recorder_html, height=700)
+    
+    if video_data:
+        st.success(" Video received from browser!")
+        
+        # Decode base64 video data
+        try:
+            video_bytes = base64.b64decode(video_data)
+            
+            # Save to output path
+            with open(output_path, 'wb') as f:
+                f.write(video_bytes)
+            
+            st.success(f" Video saved to {output_path}")
+            return str(output_path), None
+            
+        except Exception as e:
+            return None, f"Error saving video: {str(e)}"
+    
+    return None, None
+
+
+def record_webcam_with_audio(output_path, duration=15, camera_index=0):
+    """
+    Wrapper function to maintain compatibility with existing code
+    Redirects to a cloud-compatible browser recording
+    """
+    return record_webcam_cloud(output_path, duration)
+
+
+# Alternative: Simple frame capture (if you just need photos)
+def capture_photo_cloud():
+    """Capture a single photo using browser camera"""
+    st.markdown("### 📸 Photo Capture")
+    
+    picture = st.camera_input("Take a photo")
+    
+    if picture:
+        # Save the photo
+        photo_path = Path(tempfile.gettempdir()) / f"photo_{int(time.time())}.jpg"
+        with open(photo_path, 'wb') as f:
+            f.write(picture.getvalue())
+        
+        st.success(f"Photo saved!")
+        return str(photo_path)
+    
+    return None
